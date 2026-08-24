@@ -1,4 +1,4 @@
-import { stripe, Stripe } from "@/lib/stripe";
+import { requireStripe, Stripe } from "@/lib/stripe";
 import {
   cartRepository,
   ordersRepository,
@@ -13,13 +13,12 @@ import {
   type OrderWithDetails,
 } from "@/lib/db/drizzle/schema";
 
-export { stripe };
-
 export async function getOrCreateStripeCustomer(
   userId: string,
   email: string,
 ): Promise<string> {
   try {
+    const stripe = requireStripe();
     const existing = await stripe.customers.list({ email, limit: 1 });
 
     if (existing.data.length > 0) {
@@ -39,7 +38,6 @@ export async function getOrCreateStripeCustomer(
   }
 }
 
-// Parse cart item IDs from metadata
 function parseCartItemIds(cartItemIdsStr: string): number[] {
   if (!cartItemIdsStr) return [];
   return cartItemIdsStr.split(",").map((id) => parseInt(id, 10));
@@ -63,6 +61,7 @@ export interface StripeProductResult {
 export async function createStripeProductForVariant(
   params: CreateStripeProductParams,
 ): Promise<StripeProductResult> {
+  const stripe = requireStripe();
   const { productName, variantColor, description, price, images, metadata } =
     params;
 
@@ -97,6 +96,7 @@ export async function updateStripeProduct(
   params: Partial<CreateStripeProductParams>,
 ): Promise<StripeProductResult | null> {
   try {
+    const stripe = requireStripe();
     const existingPrice = await stripe.prices.retrieve(priceId);
     const productId = existingPrice.product as string;
 
@@ -157,6 +157,7 @@ export async function updateStripeProduct(
 
 export async function archiveStripeProduct(priceId: string): Promise<boolean> {
   try {
+    const stripe = requireStripe();
     const price = await stripe.prices.retrieve(priceId);
     const productId = price.product as string;
 
@@ -201,6 +202,7 @@ export async function fetchCheckoutData(
     const user = await getUser();
     if (!user) return { status: "not_found" };
 
+    const stripe = requireStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["payment_intent"],
     });
@@ -209,7 +211,6 @@ export async function fetchCheckoutData(
       return { status: "not_found" };
     }
 
-    // Map Stripe session status to our status
     if (session.status === "complete" && session.payment_status === "paid") {
       return { status: "success", session };
     }
@@ -243,6 +244,7 @@ export async function fetchCheckoutData(
 
 export async function deactivateStripePrice(priceId: string): Promise<boolean> {
   try {
+    const stripe = requireStripe();
     await stripe.prices.update(priceId, { active: false });
     stripeLogger.info(`Deactivated Stripe price ${priceId}`);
     return true;
@@ -255,6 +257,7 @@ export async function deactivateStripePrice(priceId: string): Promise<boolean> {
 async function getLineItemsFromSession(
   sessionId: string,
 ): Promise<Stripe.LineItem[]> {
+  const stripe = requireStripe();
   const lineItems = await stripe.checkout.sessions.listLineItems(sessionId, {
     expand: ["data.price.product"],
   });
@@ -274,7 +277,6 @@ async function clearUserCart(userId: string) {
   }
 }
 
-// Fetch cart items from DB using IDs stored in metadata
 async function getCartItemsFromMetadata(
   metadata: Stripe.Metadata | null,
   userId: string,
@@ -292,10 +294,6 @@ async function getCartItemsFromMetadata(
       variantId: item.variantId,
       size: item.size,
       quantity: item.quantity,
-      // Authoritative variant -> price mapping, matching how the checkout
-      // line items were built. Using the cart row's stripe_id here would fail
-      // to match (and silently drop the order product) for any legacy row
-      // whose stripe_id disagrees with its variant.
       stripeId: item.variant.stripeId,
     }));
 }
@@ -330,7 +328,6 @@ function buildOrderProductsInput(
     .filter((item): item is NonNullable<typeof item> => item !== null);
 }
 
-// Idempotent: returns existing order if already processed
 export async function processCompletedOrder(
   session: Stripe.Checkout.Session,
 ): Promise<OrderWithDetails> {
@@ -394,7 +391,6 @@ export async function processCompletedOrder(
   return savedOrder;
 }
 
-// Hook for abandoned cart recovery (analytics, emails, etc.)
 export async function handleExpiredSession(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
@@ -409,6 +405,4 @@ export async function handleExpiredSession(
       amount: session.amount_total,
     },
   });
-
-  // TODO: Implement abandoned cart email / analytics
 }
