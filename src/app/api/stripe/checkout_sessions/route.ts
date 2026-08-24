@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { z } from "zod";
 
-import { stripe } from "@/lib/stripe";
+import { requireStripe } from "@/lib/stripe";
 import { auth } from "@/utils/auth";
 
 const checkoutSessionQuerySchema = z.object({
@@ -33,10 +33,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const stripe = requireStripe();
     const checkoutSession = await stripe.checkout.sessions.retrieve(
       parsed.data.session_id,
       {
-      expand: ["payment_intent"],
+        expand: ["payment_intent"],
       },
     );
 
