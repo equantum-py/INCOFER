@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { stripe } from "@/lib/stripe";
+import { requireStripe } from "@/lib/stripe";
 import { buildLineItems } from "@/lib/stripe/line-items";
 import { stripeLogger } from "@/lib/stripe/logger";
 import { getOrCreateStripeCustomer } from "@/services/stripe.service";
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     const expiresAt =
       Math.floor(Date.now() / 1000) + SESSION_EXPIRY_MINUTES * 60;
     const origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL;
+    const stripe = requireStripe();
 
     const session = await stripe.checkout.sessions.create({
       ...(customerId && { customer: customerId }),
