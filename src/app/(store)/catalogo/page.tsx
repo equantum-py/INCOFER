@@ -1,16 +1,45 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { getAllProductsState } from "@/app/actions";
-import { GridProducts, ProductItem } from "@/components/products";
+import { GridProducts, ProductItem, ProductsSkeleton } from "@/components/products";
 
 export const metadata: Metadata = {
   title: "Catálogo | INCOFER",
   description: "Explorá el catálogo de productos disponibles en INCOFER.",
 };
 
-export default async function CatalogPage() {
+async function CatalogContent() {
   const { products, error } = await getAllProductsState();
 
+  if (error) {
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 px-5 py-8 text-center">
+        <h2 className="text-lg font-extrabold text-red-900">No pudimos cargar el catálogo</h2>
+        <p className="mt-2 text-sm text-red-700">{error}</p>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
+        <h2 className="text-lg font-extrabold text-[#073c55]">Catálogo en actualización</h2>
+        <p className="mt-2 text-sm text-slate-500">Todavía no hay productos reales publicados.</p>
+      </div>
+    );
+  }
+
+  return (
+    <GridProducts>
+      {products.map((product) => (
+        <ProductItem key={product.id} product={product} />
+      ))}
+    </GridProducts>
+  );
+}
+
+export default function CatalogPage() {
   return (
     <section className="mx-auto min-h-[50vh] max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 lg:px-10">
       <div className="mb-6 border-b border-slate-200 pb-4">
@@ -21,23 +50,9 @@ export default async function CatalogPage() {
         </p>
       </div>
 
-      {error ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-5 py-8 text-center">
-          <h2 className="text-lg font-extrabold text-red-900">No pudimos cargar el catálogo</h2>
-          <p className="mt-2 text-sm text-red-700">{error}</p>
-        </div>
-      ) : products.length > 0 ? (
-        <GridProducts>
-          {products.map((product) => (
-            <ProductItem key={product.id} product={product} />
-          ))}
-        </GridProducts>
-      ) : (
-        <div className="rounded-md border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
-          <h2 className="text-lg font-extrabold text-[#073c55]">Catálogo en actualización</h2>
-          <p className="mt-2 text-sm text-slate-500">Todavía no hay productos reales publicados.</p>
-        </div>
-      )}
+      <Suspense fallback={<ProductsSkeleton items={8} />}>
+        <CatalogContent />
+      </Suspense>
     </section>
   );
 }
