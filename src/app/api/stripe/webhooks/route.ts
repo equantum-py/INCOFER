@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { requireStripe } from "@/lib/stripe";
 import { stripeLogger } from "@/lib/stripe/logger";
 import { handleWebhookEvent } from "@/lib/stripe/handlers";
 
@@ -16,9 +16,11 @@ export async function POST(req: NextRequest) {
       stripeLogger.error("Missing stripe-signature header");
       return NextResponse.json(
         { error: "Missing stripe-signature header" },
-        { status: 400 }
+        { status: 400 },
       );
     }
+
+    const stripe = requireStripe();
 
     let event;
     try {
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
       stripeLogger.error("Webhook signature verification failed", err);
       return NextResponse.json(
         { error: "Webhook signature verification failed" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -42,11 +44,10 @@ export async function POST(req: NextRequest) {
         processingTimeMs: processingTime,
       });
 
-      // 500 triggers Stripe retry, 200 acknowledges without retry
       if (result.retryable) {
         return NextResponse.json(
           { error: "Temporary processing error", retryable: true },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
     stripeLogger.error("Unexpected webhook error", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
