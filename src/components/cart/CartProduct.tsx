@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { formatStorePrice } from "@/config/storefront";
 import type {
   CartItem,
   Product,
@@ -26,29 +27,28 @@ export const CartProduct = ({
   variant,
 }: CartProductProps) => {
   const { name, price, category, id } = product;
-
-  const productLink = `/${category}/${id}?variant=${variant.color}`;
+  const productLink = `/${category}/${id}?variant=${encodeURIComponent(variant.color)}`;
+  const image = variant.images[0] ?? product.img;
 
   return (
-    <div className="flex flex-col justify-between overflow-hidden rounded-md border border-solid border-border-primary">
-      <Link href={productLink} className="transition-all hover:scale-105">
+    <div className="grid overflow-hidden rounded-md border border-slate-200 bg-white sm:grid-cols-[180px_1fr]">
+      <Link href={productLink} className="block bg-white">
         <ProductImage
-          image={variant.images[0]}
+          image={image}
           name={name}
-          width={280}
-          height={425}
-          sizes="(max-width: 640px) 100vw, (max-width: 1154px) 33vw, (max-width: 1536px) 25vw, 20vw"
+          width={4}
+          height={3}
+          sizes="(max-width: 639px) 100vw, 180px"
         />
       </Link>
-      <div className="z-10 flex flex-col justify-between gap-2.5 bg-background-secondary p-3.5">
-        <div className="flex w-full justify-between">
-          <Link href={productLink} className="w-10/12">
-            <h2 className="truncate text-sm font-semibold">{name}</h2>
+      <div className="flex min-w-0 flex-col justify-between gap-3 p-4">
+        <div className="flex w-full items-start justify-between gap-3">
+          <Link href={productLink} className="min-w-0 flex-1">
+            <h2 className="line-clamp-2 text-sm font-extrabold text-[#073c55] sm:text-base">{name}</h2>
           </Link>
-
           <DeleteButton cartItemId={cartItemId} />
         </div>
-        <div className="text-sm">{price.toFixed(2)} EUR</div>
+        <div className="text-base font-black text-[#e91d46]">{formatStorePrice(price)}</div>
         <ProductCartInfo
           cartItemId={cartItemId}
           size={size}

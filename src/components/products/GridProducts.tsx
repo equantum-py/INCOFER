@@ -1,17 +1,19 @@
+import type { ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 
 export const GridProducts = ({
   children,
   className,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) => {
   return (
     <div
       className={cn(
-        "grid gap-x-3.5 gap-y-6 sm:gap-y-9 sm:grid-cols-auto-fill-250",
-        className
+        "grid grid-cols-1 gap-4 min-[390px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4",
+        className,
       )}
     >
       {children}

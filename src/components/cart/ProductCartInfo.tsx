@@ -1,12 +1,10 @@
 "use client";
 
-/** FUNCTIONALITY */
 import { useThrottleFn } from "ahooks";
-import { useCartMutation } from "@/hooks/cart";
-/** ICONS */
 import { IoAdd, IoRemove } from "react-icons/io5";
-/** TYPES */
-import type { ProductVariant, CartItem } from "@/lib/db/drizzle/schema";
+
+import { useCartMutation } from "@/hooks/cart";
+import type { CartItem, ProductVariant } from "@/lib/db/drizzle/schema";
 
 interface ProductCartInfoProps {
   cartItemId: CartItem["id"];
@@ -21,98 +19,60 @@ export const ProductCartInfo = ({
   quantity,
   color,
 }: ProductCartInfoProps) => {
-  const { update: editQuantity, remove: removeFromCart } = useCartMutation();
+  const {
+    update: editQuantity,
+    remove: removeFromCart,
+    isUpdating,
+    isRemoving,
+  } = useCartMutation();
+  const disabled = isUpdating || isRemoving;
 
   const { run: throttledIncrease } = useThrottleFn(
-    () => {
-      editQuantity({
-        itemId: cartItemId,
-        quantity: quantity + 1,
-      });
-    },
-    {
-      wait: 300,
-    },
+    () => editQuantity({ itemId: cartItemId, quantity: quantity + 1 }),
+    { wait: 300 },
   );
 
   const { run: throttledDecrease } = useThrottleFn(
     () => {
       if (quantity > 1) {
-        editQuantity({
-          itemId: cartItemId,
-          quantity: quantity - 1,
-        });
+        editQuantity({ itemId: cartItemId, quantity: quantity - 1 });
       } else {
         removeFromCart({ itemId: cartItemId });
       }
     },
-    {
-      wait: 300,
-    },
+    { wait: 300 },
   );
 
   return (
-    <>
-      <div className="flex sm:hidden">
-        <div className="text-sm pr-2.5 border-r">{size}</div>
-        <div className="text-sm pl-2.5">{color}</div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2 text-xs text-slate-500">
+        <span className="rounded bg-slate-100 px-2 py-1">Talle: {size}</span>
+        <span className="rounded bg-slate-100 px-2 py-1">Variante: {color}</span>
       </div>
-      <div className="flex items-center justify-between sm:hidden">
-        <div className="flex bg-background-primary w-min">
-          <button
-            className="flex items-center justify-center w-8 h-8 p-2 border border-solid rounded-l text-color-secondary transition-all hover:text-white border-border-primary disabled:opacity-50"
-            onClick={throttledDecrease}
-            disabled={false}
-            aria-label="Decrease quantity"
-          >
-            <IoRemove className="w-4 h-4" />
-          </button>
-          <span
-            className="flex items-center justify-center w-8 h-8 p-2 text-sm border-solid border-y border-border-primary"
-            aria-label={`Current quantity: ${quantity}`}
-          >
-            {quantity}
-          </span>
-          <button
-            className="flex items-center justify-center w-8 h-8 p-2 border border-solid rounded-r text-color-secondary transition-all hover:text-white border-border-primary disabled:opacity-50"
-            onClick={throttledIncrease}
-            disabled={false}
-            aria-label="Increase quantity"
-          >
-            <IoAdd className="w-4 h-4" />
-          </button>
-        </div>
+
+      <div className="flex w-min items-center overflow-hidden rounded-md border border-slate-300 bg-white">
+        <button
+          type="button"
+          className="flex h-11 w-11 items-center justify-center text-[#073c55] transition hover:bg-slate-50 disabled:opacity-50"
+          onClick={throttledDecrease}
+          disabled={disabled}
+          aria-label={quantity > 1 ? "Disminuir cantidad" : "Quitar producto"}
+        >
+          <IoRemove className="h-4 w-4" aria-hidden />
+        </button>
+        <span className="flex h-11 min-w-11 items-center justify-center border-x border-slate-300 px-3 text-sm font-bold text-slate-700" aria-label={`Cantidad actual: ${quantity}`}>
+          {quantity}
+        </span>
+        <button
+          type="button"
+          className="flex h-11 w-11 items-center justify-center text-[#073c55] transition hover:bg-slate-50 disabled:opacity-50"
+          onClick={throttledIncrease}
+          disabled={disabled}
+          aria-label="Aumentar cantidad"
+        >
+          <IoAdd className="h-4 w-4" aria-hidden />
+        </button>
       </div>
-      <div className="items-center justify-between hidden sm:flex">
-        <div className="flex bg-background-primary w-min">
-          <button
-            className="flex items-center justify-center w-8 h-8 p-2 border border-solid rounded-l text-color-secondary transition-all hover:text-white border-border-primary disabled:opacity-50"
-            onClick={throttledDecrease}
-            disabled={false}
-            aria-label="Decrease quantity"
-          >
-            <IoRemove className="w-4 h-4" />
-          </button>
-          <span
-            className="flex items-center justify-center w-8 h-8 p-2 text-sm border-solid border-y border-border-primary"
-            aria-label={`Current quantity: ${quantity}`}
-          >
-            {quantity}
-          </span>
-          <button
-            className="flex items-center justify-center w-8 h-8 p-2 border border-solid rounded-r text-color-secondary transition-all hover:text-white border-border-primary disabled:opacity-50"
-            onClick={throttledIncrease}
-            disabled={false}
-            aria-label="Increase quantity"
-          >
-            <IoAdd className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex">
-          <div className="text-sm pr-2.5 border-r">{size}</div>
-          <div className="text-sm pl-2.5">{color}</div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 };

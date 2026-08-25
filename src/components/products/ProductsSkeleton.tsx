@@ -12,30 +12,31 @@ export const ProductsSkeleton = ({
   const productSkeletons = Array.from({ length: items }, (_, index) => (
     <div
       key={index}
-      className={`flex justify-between border border-solid border-border-primary rounded-md overflow-hidden 
-            ${
-              extraClassname === "cart-ord-mobile"
-                ? "flex-row sm:flex-col"
-                : "flex-col"
-            }`}
+      className={`overflow-hidden rounded-md border border-slate-200 bg-white ${
+        extraClassname === "cart-ord-mobile" ? "flex sm:block" : ""
+      }`}
     >
-      <Skeleton className="w-full aspect-[2/3] rounded-b-none" />
-      <div className="flex justify-between flex-col gap-2.5 p-3.5">
-        <Skeleton className="h-5 full" />
-        <Skeleton className="h-5 w-[200px]" />
+      <Skeleton
+        className={
+          extraClassname === "cart-ord-mobile"
+            ? "aspect-square w-32 shrink-0 sm:w-full"
+            : "aspect-[4/3] w-full"
+        }
+      />
+      <div className="space-y-3 p-4">
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-6 w-2/5" />
+        <Skeleton className="h-11 w-full" />
       </div>
     </div>
   ));
 
+  if (extraClassname === "cart-ord-mobile") {
+    return <div className="grid grid-cols-1 gap-4">{productSkeletons}</div>;
+  }
+
   return (
-    <div
-      className={`grid gap-x-3.5 gap-y-6 sm:gap-y-9 ${
-        extraClassname === "colums-mobile" ? "grid-cols-auto-fill-110" : ""
-      }
-        ${
-          extraClassname === "cart-ord-mobile" ? "grid-cols-1" : ""
-        } sm:grid-cols-auto-fill-250`}
-    >
+    <div className="grid grid-cols-1 gap-4 min-[390px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
       {productSkeletons}
     </div>
   );

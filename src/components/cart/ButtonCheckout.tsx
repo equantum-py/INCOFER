@@ -1,27 +1,28 @@
 "use client";
 
-/** FUNCTIONALITY */
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useSession } from "@/lib/auth/client";
-import { useMutation } from "@tanstack/react-query";
-/** COMPONENTS */
-import LoadingButton from "@/components/ui/loadingButton";
-/** TYPES */
+
 import type { CartItem } from "@/lib/db/drizzle/schema";
+import LoadingButton from "@/components/ui/loadingButton";
 
 interface ButtonCheckoutProps {
   cartItemIds: CartItem["id"][];
 }
 
 export const ButtonCheckout = ({ cartItemIds }: ButtonCheckoutProps) => {
-  const { data: session } = useSession();
+  const checkoutStatus = useQuery({
+    queryKey: ["checkout-status"],
+    queryFn: async () => {
+      const response = await fetch("/api/stripe/payment", { method: "GET" });
+      if (!response.ok) throw new Error("No pudimos verificar el medio de pago");
+      return (await response.json()) as { enabled: boolean };
+    },
+    staleTime: 60_000,
+  });
 
   const { mutate: buyProducts, isPending } = useMutation({
     mutationFn: async () => {
-      if (!session?.user) {
-        throw new Error("User information not found");
-      }
-
       const response = await fetch("/api/stripe/payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,36 +31,33 @@ export const ButtonCheckout = ({ cartItemIds }: ButtonCheckoutProps) => {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.message || "Error processing checkout";
-        throw new Error(errorMessage);
+        throw new Error(errorData.message || "No pudimos iniciar el pago");
       }
 
-      const data = await response.json();
-
-      if (!data.url) {
-        throw new Error("Checkout URL is not available");
-      }
-
+      const data = (await response.json()) as { url?: string };
+      if (!data.url) throw new Error("El enlace de pago no está disponible");
       window.location.assign(data.url);
     },
     onError: (error) => {
-      console.error("Checkout error:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "An error occurred while processing your request. Please try again.",
-      );
+      toast.error(error instanceof Error ? error.message : "No pudimos iniciar el pago");
     },
   });
+
+  const enabled = checkoutStatus.data?.enabled === true;
+  const checking = checkoutStatus.isPending;
 
   return (
     <LoadingButton
       onClick={() => buyProducts()}
-      className="w-full rounded-none bg-background-secondary p-2.5 h-full transition-all hover:bg-background-tertiary"
+      className="min-h-14 w-full rounded-none bg-[#073c55] p-3 text-sm font-bold text-white transition hover:bg-[#0a4d6c] disabled:bg-slate-200 disabled:text-slate-500"
       loading={isPending}
-      disabled={cartItemIds.length === 0}
+      disabled={cartItemIds.length === 0 || checking || !enabled}
     >
-      Continue
+      {checking
+        ? "Verificando pago..."
+        : enabled
+          ? "Continuar al pago"
+          : "Pago online no configurado"}
     </LoadingButton>
   );
 };

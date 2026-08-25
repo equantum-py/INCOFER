@@ -8,19 +8,25 @@ import {
   type ProductWithVariants,
 } from "@/lib/db/drizzle/schema";
 
-/**
- * Fetch all products with caching
- * Cache is tagged for invalidation and set to revalidate every hour
- */
+export interface ProductListState {
+  products: ProductWithVariants[];
+  error: string | null;
+}
+
+async function loadAllProducts(): Promise<ProductWithVariants[]> {
+  const products = await productsRepository.findAll();
+  const validatedProducts = productWithVariantsSchema.array().parse(products);
+  return validatedProducts.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Fetch all products with caching for normal catalog surfaces. */
 export async function getAllProducts(): Promise<ProductWithVariants[]> {
   "use cache";
   cacheTag("products");
   cacheLife("hours");
 
   try {
-    const products = await productsRepository.findAll();
-    const validatedProducts = productWithVariantsSchema.array().parse(products);
-    return validatedProducts.sort((a, b) => a.name.localeCompare(b.name));
+    return await loadAllProducts();
   } catch (error) {
     console.error("Error fetching products:", error);
     return [];
@@ -28,9 +34,23 @@ export async function getAllProducts(): Promise<ProductWithVariants[]> {
 }
 
 /**
- * Fetch products by category with caching
- * Each category has its own cache entry (category arg becomes part of cache key)
+ * Fetch all products while preserving an explicit UI error state.
+ * Used by surfaces where "empty catalog" and "catalog failed" must not look
+ * like the same thing.
  */
+export async function getAllProductsState(): Promise<ProductListState> {
+  try {
+    return { products: await loadAllProducts(), error: null };
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return {
+      products: [],
+      error: "No pudimos cargar los productos. Intentá nuevamente en unos minutos.",
+    };
+  }
+}
+
+/** Fetch products by category with caching. */
 export async function getCategoryProducts(
   category: ProductCategory,
 ): Promise<ProductWithVariants[]> {
@@ -48,10 +68,7 @@ export async function getCategoryProducts(
   }
 }
 
-/**
- * Fetch a single product by ID with caching
- * Each product has its own cache entry (productId arg becomes part of cache key)
- */
+/** Fetch a single product by ID with caching. */
 export async function getProduct(
   productId: number,
 ): Promise<ProductWithVariants | null> {
@@ -69,17 +86,13 @@ export async function getProduct(
   }
 }
 
-/**
- * Fetch random products excluding a specific product
- * Note: This is dynamic (random) so it stays outside cache
- * It benefits from the cached getAllProducts() call
- */
+/** Fetch random products excluding a specific product. */
 export async function getRandomProducts(
   productIdToExclude: number,
 ): Promise<ProductWithVariants[]> {
   try {
     const allProducts = await getAllProducts();
-    const filtered = allProducts.filter((p) => p.id !== productIdToExclude);
+    const filtered = allProducts.filter((product) => product.id !== productIdToExclude);
     const shuffled = filtered.sort(() => Math.random() - 0.5);
     return productWithVariantsSchema.array().parse(shuffled.slice(0, 6));
   } catch (error) {
@@ -88,16 +101,10 @@ export async function getRandomProducts(
   }
 }
 
-/**
- * Invalidates all product caches immediately
- * Call this after creating, updating, or deleting products
- * Uses updateTag for read-your-own-writes semantics (user sees changes immediately)
- */
+/** Invalidates product caches after catalog writes. */
 export async function revalidateProducts(productId?: number): Promise<void> {
-  // Always invalidate the general products tag
   updateTag("products");
 
-  // If a specific product ID is provided, also invalidate that specific product
   if (productId) {
     updateTag(`product-${productId}`);
   }

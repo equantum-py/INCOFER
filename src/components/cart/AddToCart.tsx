@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-
 import { useThrottleFn } from "ahooks";
 
 import { useCartMutation } from "@/hooks/cart";
@@ -9,7 +8,6 @@ import {
   type ProductVariant,
   type ProductWithVariants,
 } from "@/lib/db/drizzle/schema";
-
 import { Button } from "@/components/ui/button";
 
 import { Colors } from "./Colors";
@@ -21,12 +19,12 @@ interface BaseAddToCartProps {
 }
 
 function useAddToCartAction(selectedVariant?: ProductVariant) {
-  const { add: addToCart } = useCartMutation();
+  const { add: addToCart, isAdding } = useCartMutation();
   const sizesRef = useRef<SizesRef>(null!);
 
   const { run: throttledAddToCart } = useThrottleFn(
     () => {
-      if (!selectedVariant) return;
+      if (!selectedVariant || selectedVariant.sizes.length === 0 || !sizesRef.current) return;
 
       addToCart({
         size: sizesRef.current.selectedSize,
@@ -39,15 +37,13 @@ function useAddToCartAction(selectedVariant?: ProductVariant) {
   return {
     sizesRef,
     throttledAddToCart,
-    isDisabled: !selectedVariant,
+    isAdding,
+    isDisabled: !selectedVariant || selectedVariant.sizes.length === 0 || isAdding,
   };
 }
 
-export function AddToCart({
-  product,
-  selectedVariant,
-}: BaseAddToCartProps) {
-  const { sizesRef, throttledAddToCart, isDisabled } =
+export function AddToCart({ product, selectedVariant }: BaseAddToCartProps) {
+  const { sizesRef, throttledAddToCart, isDisabled, isAdding } =
     useAddToCartAction(selectedVariant);
 
   return (
@@ -62,24 +58,21 @@ export function AddToCart({
 
       <div className="border-t border-solid border-border-primary">
         <Button
-          type="submit"
+          type="button"
           variant="default"
           disabled={isDisabled}
           onClick={() => throttledAddToCart()}
-          className="w-full rounded-none bg-background-secondary p-2 text-13 transition duration-150 ease hover:bg-background-tertiary"
+          className="min-h-11 w-full rounded-none bg-background-secondary p-2 text-13 transition duration-150 ease hover:bg-background-tertiary"
         >
-          Add to cart
+          {isAdding ? "Agregando..." : "Agregar al carrito"}
         </Button>
       </div>
     </>
   );
 }
 
-export function MobileAddToCart({
-  product,
-  selectedVariant,
-}: BaseAddToCartProps) {
-  const { sizesRef, throttledAddToCart, isDisabled } =
+export function MobileAddToCart({ product, selectedVariant }: BaseAddToCartProps) {
+  const { sizesRef, throttledAddToCart, isDisabled, isAdding } =
     useAddToCartAction(selectedVariant);
 
   return (
@@ -98,13 +91,13 @@ export function MobileAddToCart({
       </div>
 
       <Button
-        type="submit"
+        type="button"
         variant="default"
         disabled={isDisabled}
         onClick={() => throttledAddToCart()}
-        className="w-full rounded-md bg-white py-3 text-sm font-medium text-black transition-colors hover:bg-gray-100"
+        className="min-h-12 w-full rounded-md bg-white py-3 text-sm font-medium text-black transition-colors hover:bg-gray-100"
       >
-        Add to cart
+        {isAdding ? "Agregando..." : "Agregar al carrito"}
       </Button>
     </div>
   );

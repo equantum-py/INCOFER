@@ -1,8 +1,6 @@
-/** COMPONENTS */
 import Image from "next/image";
-/** FUNCTIONALITY */
+
 import { cn } from "@/lib/utils";
-/** TYPES */
 import type { Product, ProductVariant } from "@/lib/db/drizzle/schema";
 
 interface ProductImageProps {
@@ -32,7 +30,7 @@ export const ProductImage = ({
 }: ProductImageProps) => {
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden bg-white"
       style={{ aspectRatio: `${width} / ${height}` }}
     >
       <Image
@@ -45,7 +43,7 @@ export const ProductImage = ({
         quality={quality}
         unoptimized={unoptimized}
         sizes={sizes}
-        className={cn("object-cover brightness-90", className)}
+        className={cn("object-contain p-3", className)}
       />
     </div>
   );
