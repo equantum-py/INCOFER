@@ -13,7 +13,7 @@ async function SearchResults({ searchParams }: SearchProps) {
     getAllProductsState(),
     searchParams,
   ]);
-  const q = pickFirst(params, "q").trim();
+  const q = (pickFirst(params, "q") ?? "").trim();
 
   if (error) {
     return (
