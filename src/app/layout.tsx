@@ -12,7 +12,7 @@ import "@/styles/colors.css";
 import "@/styles/animations.css";
 
 const defaultDescription =
-  "Modern ecommerce template built with Next.js 16, React 19, Drizzle, Better Auth, Supabase, and Stripe.";
+  "INCOFER Ferretería: herramientas, materiales y soluciones para obra, taller y hogar en Paraguay.";
 
 function getMetadataBase() {
   try {
@@ -25,18 +25,26 @@ function getMetadataBase() {
 }
 
 export const metadata: Metadata = {
-  title: "Ecommerce Template",
+  title: {
+    default: "INCOFER | Ferretería",
+    template: "%s | INCOFER",
+  },
   description: defaultDescription,
   metadataBase: getMetadataBase(),
+  applicationName: "INCOFER Ferretería",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
   openGraph: {
-    title: "Ecommerce Template",
+    title: "INCOFER | Ferretería",
     description: defaultDescription,
     type: "website",
-    siteName: "Ecommerce Template",
+    siteName: "INCOFER Ferretería",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ecommerce Template",
+    title: "INCOFER | Ferretería",
     description: defaultDescription,
   },
 };
@@ -47,7 +55,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="es-PY">
       <body className={GeistSans.className}>
         <Providers>
           <Navbar />
